@@ -38,9 +38,18 @@ For some reason, the pump doesn't talk basic Modbus (coils and registers) which 
 
 I won't go into how to flash these devices, there are tons of resources available, you can start looking at https://esphome.io/
 
-As of writing, ESPHome 2022.4.0 doesn't support being able to piggyback on the basic modbus driver, so I had to do a bit of patching ... this can be found here (link to PR for modbus handling).
+As of writing, ESPHome 2022.4.0 doesn't support being able to handle user-defined modbus functions, so you need to include the PR for the fix. This is done using this YAML in your configuration.
 
-All you need to do to use this pump code is to include the two source files in your ESPHome source folder. I really hate having multiple classes in a single source file, but for easy of use I swallowed my prejudice.
+```yaml
+external_components:
+  - source:
+      type: git
+      url: https://github.com/gazoodle/esphome
+      ref: Feature-Request-#1725
+    components: [modbus]
+```
+
+All you need to do to use this pump code is to include the two source files (CenturyVSPump.h and CenturyVSPump.cpp) in your ESPHome source folder. I really hate having multiple classes in a single source file, but for easy of use I swallowed my prejudice. Going to
 
 You then add this as a custom component to your YAML file (see the example for a complete example).
 

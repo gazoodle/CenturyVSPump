@@ -20,6 +20,12 @@ wifi:
   password: !secret wifi_PWD
   ssid: !secret wifi_SSID
 captive_portal:
+external_components:
+  - source:
+      type: git
+      url: https://github.com/gazoodle/esphome
+      ref: Feature-Request-#1725
+    components: [modbus]
 logger:
 api:
   password: !secret api_PWD
