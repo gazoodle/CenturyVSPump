@@ -38,24 +38,107 @@ For some reason, the pump doesn't talk basic Modbus (coils and registers) which 
 
 I won't go into how to flash these devices, there are tons of resources available, you can start looking at https://esphome.io/
 
-As of writing, ESPHome 2022.4.0 doesn't support being able to handle user-defined modbus functions, so you need to include the PR for the fix. This is done using this YAML in your configuration.
+As of writing, ESPHome 2022.5.1 doesn't support being able to handle user-defined modbus functions, so you need to include the PR for the fix. This is done using this YAML in your configuration.
 
 ```yaml
 external_components:
   - source:
       type: git
       url: https://github.com/gazoodle/esphome
-      ref: Feature-Request-#1725
+      ref: bug-fix-modbus-user-defined-function-handling
     components: [modbus]
 ```
 
-All you need to do to use this pump code is to include the two source files (CenturyVSPump.h and CenturyVSPump.cpp) in your ESPHome source folder. I really hate having multiple classes in a single source file, but for easy of use I swallowed my prejudice. Going to
+Since this pump code is based off of data gleaned from an unsupported document, I won't be pushing this pump code to the ESPHome main branch, but you can get it from my GIT repo using this YAML.
 
-You then add this as a custom component to your YAML file (see the example for a complete example).
+```yaml
+external_components:
+  - source:
+      type: git
+      url: https://github.com/gazoodle/CenturyVSPump
+      ref: main
+```
 
 Once flashed and added to Home Assistant, you will be able to turn the pump on or off and set the RPM speed.
 
-I also included some buttons in the example YAML to do things like change the pump address, save modifications to flash.
+# YAML configuration
+
+```yaml
+external_components:
+  # Needed to implement latest modbus user-defined function handling
+  - source:
+      type: git
+      url: https://github.com/gazoodle/esphome
+      ref: bug-fix-modbus-user-defined-function-handling
+    components: [modbus]
+  # Location of CenturyVSPump component implmentation
+  - source:
+      type: git
+      url: https://github.com/gazoodle/CenturyVSPump
+      ref: main
+
+# You need a UART to talk to the RS485 bus
+uart:
+  baud_rate: 9600
+  rx_pin: GPIO22
+  tx_pin: GPIO19
+
+# You need the modbus component installed too
+modbus:
+
+# Include the CenturyVSPump external component in your firmware
+centuryvspump:
+
+switch:
+  # Turn pump motor ON or OFF
+  - platform: centuryvspump
+    name: Pool Pump Controller Run
+
+sensor:
+  # Get current motor speed in RPM
+  - platform: centuryvspump
+    name: Pool Pump Controller RPM
+    type: rpm
+    unit_of_measurement: RPM
+  # Get current motor speed demand in RPM
+  - platform: centuryvspump
+    name: Pool Pump Controller Demand
+    address: 3
+    page: 0
+    scale: 4
+    type: custom
+    unit_of_measurement: RPM
+
+# Control the pump speed demand RPM (range is from 600 to 3450 in steps of 50)
+number:
+  - platform: centuryvspump
+    name: Pool Pump Controller Demand
+    id: id_number_rpm
+
+# You can also have some buttons to force specific RPM speeds
+button:
+  - platform: template
+    name: Pool Pump Controller Demand 600RPM
+    on_press:
+      then:
+        - number.set:
+            id: id_number_rpm
+            value: 600
+  - platform: template
+    name: Pool Pump Controller Demand 2600RPM
+    on_press:
+      then:
+        - number.set:
+            id: id_number_rpm
+            value: 2600
+  - platform: template
+    name: Pool Pump Controller Demand 3450RPM
+    on_press:
+      then:
+        - number.set:
+            id: id_number_rpm
+            value: 3450
+```
 
 # Keywords
 
@@ -79,3 +162,7 @@ A list of sources that I discovered and thought might be of use when driving my 
 - http://www.desert-home.com/2019/03/i-finally-gave-up-on-my-hayward.html
 - https://github.com/tagyoureit/nodejs-poolController/issues/393
 - https://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b.pdf
+
+```
+
+```

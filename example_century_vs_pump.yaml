@@ -1,10 +1,7 @@
 esphome:
   platform: esp32
-  name: century_vs_pump
+  name: century-vs-pump-controller
   board: pico32
-  includes:
-    - CenturyVSPump.h
-    - CenturyVSPump.cpp
   on_boot:
     then:
       light.turn_on:
@@ -16,16 +13,10 @@ esphome:
 wifi:
   ap:
     password: !secret ap_PWD
-    ssid: century_vs_pump
+    ssid: atom_pool_pump_controller
   password: !secret wifi_PWD
   ssid: !secret wifi_SSID
 captive_portal:
-external_components:
-  - source:
-      type: git
-      url: https://github.com/gazoodle/esphome
-      ref: Feature-Request-#1725
-    components: [modbus]
 logger:
 api:
   password: !secret api_PWD
@@ -36,40 +27,86 @@ time:
     id: homeassistant_time
 binary_sensor:
   - platform: gpio
-    name: Century VS Pump Controller button
+    name: Pool Pump Controller button
     pin:
       inverted: True
       number: GPIO39
 button:
-  - platform: restart
-    name: Century VS Pump Controller Restart
   - platform: template
-    name: Century VS Pump Controller 2600RPM
-    id: id_button_14
+    name: Pool Pump Controller Demand 600RPM
+    id: id_button_7
     on_press:
       then:
-        - uart.write: [0x15, 0x44, 0x20, 0x00, 0xA0, 0x28, 0x81, 0x0F]
-custom_component:
-  - lambda: |-
-      auto custom_component = new CenturyVSPump(id(id_modbus_3), "Pool Pump", 0x15);
-      return {custom_component};
-    components:
-      id: id_century_vs_pump_13
+        - number.set:
+            id: id_number_rpm
+            value: 600
+  - platform: template
+    name: Pool Pump Controller Demand 2600RPM
+    id: id_button_6
+    on_press:
+      then:
+        - number.set:
+            id: id_number_rpm
+            value: 2600
+  - platform: template
+    name: Pool Pump Controller Demand 3450RPM
+    id: id_button_8
+    on_press:
+      then:
+        - number.set:
+            id: id_number_rpm
+            value: 3450
+centuryvspump:
+external_components:
+  # Needed to implement latest modbus user-defined function handling
+  - source:
+      type: git
+      url: https://github.com/gazoodle/esphome
+      ref: bug-fix-modbus-user-defined-function-handling
+    components: [modbus]
+  # Location of CenturyVSPump component implmentation
+  - source:
+      type: git
+      url: https://github.com/gazoodle/CenturyVSPump
+      ref: main
 light:
   - platform: neopixelbus
-    name: Century VS Pump Controller led
+    name: Pool Pump Controller led
     id: id_light_1
     num_leds: 1
     pin: GPIO27
     variant: SK6812
 modbus:
   id: id_modbus_3
+number:
+  - platform: centuryvspump
+    name: Pool Pump Controller Demand
+    id: id_number_rpm
 sensor:
+  - platform: wifi_signal
+    name: Pool Pump Controller Wifi Signal
+    update_interval: 60min
+  - platform: centuryvspump
+    name: Pool Pump Controller RPM
+    type: rpm
+    unit_of_measurement: RPM
+  - platform: centuryvspump
+    name: Pool Pump Controller Demand
+    address: 3
+    page: 0
+    scale: 4
+    type: custom
+    unit_of_measurement: RPM
 switch:
+  - platform: centuryvspump
+    name: Pool Pump Controller Run
+    id: id_switch_4
 uart:
   id: id_uart_2
   baud_rate: 9600
+  debug:
   rx_pin: GPIO22
   tx_pin: GPIO19
 web_server:
+  local: True
   port: 80
