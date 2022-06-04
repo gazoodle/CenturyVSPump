@@ -5,7 +5,7 @@ from esphome.components import modbus
 from esphome.const import CONF_ADDRESS, CONF_ID
 from esphome.cpp_helpers import logging
 
-from .const import CONF_CENTURY_VS_PUMP_ID,
+from .const import CONF_CENTURY_VS_PUMP_ID
 
 CODEOWNERS = ["@gazoodle"]
 
@@ -37,6 +37,7 @@ CenturyVSPumpItemSchema = cv.Schema(
     }
 )
 
+
 async def add_century_vs_pump_base_properties(
     var,
     config,
@@ -44,9 +45,11 @@ async def add_century_vs_pump_base_properties(
 ):
     pass
 
+
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await register_centuryvspump_device(var, config)
+
 
 async def register_centuryvspump_device(var, config):
     cg.add(var.set_address(config[CONF_ADDRESS]))
