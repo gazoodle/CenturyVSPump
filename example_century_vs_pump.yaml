@@ -13,7 +13,7 @@ esphome:
 wifi:
   ap:
     password: !secret ap_PWD
-    ssid: atom_pool_pump_controller
+    ssid: century-vs-pump-controller
   password: !secret wifi_PWD
   ssid: !secret wifi_SSID
 captive_portal:
@@ -25,6 +25,18 @@ ota:
 time:
   - platform: homeassistant
     id: homeassistant_time
+external_components:
+  # Needed to implement latest modbus user-defined function handling
+  - source:
+      type: git
+      url: https://github.com/gazoodle/esphome
+      ref: bug-fix-modbus-user-defined-function-handling
+    components: [modbus]
+  # Location of CenturyVSPump component implementation
+  - source:
+      type: git
+      url: https://github.com/gazoodle/CenturyVSPump
+      ref: main
 binary_sensor:
   - platform: gpio
     name: Pool Pump Controller button
@@ -57,21 +69,9 @@ button:
             id: id_number_rpm
             value: 3450
 centuryvspump:
-external_components:
-  # Needed to implement latest modbus user-defined function handling
-  - source:
-      type: git
-      url: https://github.com/gazoodle/esphome
-      ref: bug-fix-modbus-user-defined-function-handling
-    components: [modbus]
-  # Location of CenturyVSPump component implmentation
-  - source:
-      type: git
-      url: https://github.com/gazoodle/CenturyVSPump
-      ref: main
 light:
   - platform: neopixelbus
-    name: Pool Pump Controller led
+    name: Pool Pump Controller LED
     id: id_light_1
     num_leds: 1
     pin: GPIO27

@@ -1,5 +1,3 @@
-10/May/2022 - NOT READY FOR USE YET, need to get PR for ESPHome in place and add some more doc and code
-
 # CenturyVSPump
 
 ESPHome custom component to drive Century (and other) variable speed pump motors
@@ -71,7 +69,7 @@ external_components:
       url: https://github.com/gazoodle/esphome
       ref: bug-fix-modbus-user-defined-function-handling
     components: [modbus]
-  # Location of CenturyVSPump component implmentation
+  # Location of CenturyVSPump component implementation
   - source:
       type: git
       url: https://github.com/gazoodle/CenturyVSPump
