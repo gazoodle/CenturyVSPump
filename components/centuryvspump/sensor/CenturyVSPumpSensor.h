@@ -16,12 +16,6 @@ namespace esphome
             CenturyVSPumpSensor(uint8_t page, uint8_t address, uint16_t scale) : CenturyPumpItemBase(), page_(page), address_(address), scale_(scale)
             {
             }
-            CenturyVSPumpSensor(CenturyVSPump *pump, uint8_t page, uint8_t address, uint16_t scale, const std::string &name, const std::string &unit_of_measurement)
-                : CenturyPumpItemBase(pump), page_(page), address_(address), scale_(scale)
-            {
-                set_name(name.c_str());
-                set_unit_of_measurement(unit_of_measurement);
-            }
 
             CenturyPumpCommand create_command() override;
 
