@@ -36,17 +36,6 @@ For some reason, the pump doesn't talk basic Modbus (coils and registers) which 
 
 I won't go into how to flash these devices, there are tons of resources available, you can start looking at https://esphome.io/
 
-As of writing, ESPHome 2022.5.1 doesn't support being able to handle user-defined modbus functions, so you need to include the PR for the fix. This is done using this YAML in your configuration.
-
-```yaml
-external_components:
-  - source:
-      type: git
-      url: https://github.com/gazoodle/esphome
-      ref: bug-fix-modbus-user-defined-function-handling
-    components: [modbus]
-```
-
 Since this pump code is based off of data gleaned from an unsupported document, I won't be pushing this pump code to the ESPHome main branch, but you can get it from my GIT repo using this YAML.
 
 ```yaml
@@ -63,12 +52,6 @@ Once flashed and added to Home Assistant, you will be able to turn the pump on o
 
 ```yaml
 external_components:
-  # Needed to implement latest modbus user-defined function handling
-  - source:
-      type: git
-      url: https://github.com/gazoodle/esphome
-      ref: bug-fix-modbus-user-defined-function-handling
-    components: [modbus]
   # Location of CenturyVSPump component implementation
   - source:
       type: git
