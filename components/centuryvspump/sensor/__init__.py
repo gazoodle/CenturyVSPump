@@ -31,7 +31,7 @@ SENSOR_TYPE = century_vs_pump_ns.enum("Type")
 SENSOR_TYPES = {"rpm": SENSOR_TYPE.rpm, "custom": SENSOR_TYPE.custom}
 
 CONFIG_SCHEMA = cv.All(
-    sensor.SENSOR_SCHEMA.extend(cv.COMPONENT_SCHEMA)
+    sensor.sensor_schema(CenturyVSPumpSensor).extend(cv.COMPONENT_SCHEMA)
     .extend(CenturyVSPumpItemSchema)
     .extend(
         {

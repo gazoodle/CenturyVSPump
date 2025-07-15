@@ -26,7 +26,7 @@ CenturyVSPumpRunSwitch = century_vs_pump_ns.class_(
 
 
 CONFIG_SCHEMA = cv.All(
-    switch.SWITCH_SCHEMA.extend(cv.COMPONENT_SCHEMA)
+    switch.switch_schema(CenturyVSPumpRunSwitch).extend(cv.COMPONENT_SCHEMA)
     .extend(CenturyVSPumpItemSchema)
     .extend(
         {
