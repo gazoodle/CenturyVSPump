@@ -7,6 +7,7 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/switch/switch.h"
 
+#include <deque>
 #include <memory>
 #include <span>
 #include <vector>
@@ -105,6 +106,7 @@ namespace esphome
 
             uint8_t get_address() const { return this->address_; }
 
+            void loop() override;
             void setup() override;
             void update() override;
             void dump_config() override;
@@ -118,17 +120,18 @@ namespace esphome
             bool on_no_response(std::span<const uint8_t> request_pdu) override;
             /// called when an accepted request was dropped before it reached the wire
             void on_not_sent(std::span<const uint8_t> request_pdu) override;
+            /// called when the hub writes the current request to the wire
+            void on_sent(std::span<const uint8_t> request_pdu) override;
             /// Registers an item with the controller. Called by esphomes code generator
             void add_item(CenturyPumpItemBase *item) { items_.push_back(item); }
             void queue_command_(const CenturyPumpCommand &cmd);
 
-        protected:
-            /// Match a hub callback back to the command that produced it, by comparing request PDUs
-            std::vector<std::unique_ptr<CenturyPumpCommand>>::iterator find_pending_(std::span<const uint8_t> request_pdu);
-
         private:
-            /// Commands accepted by the hub and awaiting a terminal callback
-            std::vector<std::unique_ptr<CenturyPumpCommand>> pending_;
+            bool has_active_request_() const { return this->request_active_ && !this->command_queue_.empty(); }
+            std::deque<std::unique_ptr<CenturyPumpCommand>> command_queue_;
+            bool request_active_{false};
+            uint32_t last_command_timestamp_{0};
+            uint16_t command_throttle_{10};
 
         public:
             std::string name_;
