@@ -15,13 +15,16 @@ MULTI_CONF = True
 
 # pylint: disable=invalid-name
 century_vs_pump_ns = cg.esphome_ns.namespace("century_vs_pump")
+# Let older releases load the component far enough to report the version requirement.
+ModbusClientDevice = getattr(modbus, "ModbusClientDevice", modbus.ModbusDevice)
 CenturyVSPump = century_vs_pump_ns.class_(
-    "CenturyVSPump", cg.PollingComponent, modbus.ModbusClientDevice
+    "CenturyVSPump", cg.PollingComponent, ModbusClientDevice
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.All(
+    cv.require_esphome_version(2026, 8, 1),
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(CenturyVSPump),
