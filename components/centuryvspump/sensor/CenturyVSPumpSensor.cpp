@@ -9,7 +9,7 @@ namespace esphome
         /////////////////////////////////////////////////////////////////////////////////////////////
         CenturyPumpCommand CenturyVSPumpSensor::create_command()
         {
-            return CenturyPumpCommand::create_read_sensor_command(pump_, page_, address_, scale_, [=](CenturyVSPump *pump, uint16_t value)
+            return CenturyPumpCommand::create_read_sensor_command(pump_, page_, address_, scale_, [this](CenturyVSPump *pump, uint16_t value)
                                                                   { this->publish_state((float)value); });
         }
     }

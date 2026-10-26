@@ -7,8 +7,10 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/switch/switch.h"
 
-#include <queue>
-#include <list>
+#include <deque>
+#include <memory>
+#include <span>
+#include <vector>
 
 // #define MODBUS_ENABLE_SWITCH
 
@@ -31,7 +33,10 @@ namespace esphome
         class CenturyVSPump;
         class CenturyVSPumpSensor;
 
-        /////////////////////////////////////////////////////////////////////////////////////////////////
+        /// Acknowledgement byte the pump returns after the function code on a successful reply.
+        static const uint8_t CENTURY_ACK = 0x10;
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////
         class CenturyPumpCommand
         {
         public:
@@ -44,7 +49,9 @@ namespace esphome
             // limit the number of repeats
             uint8_t send_countdown{MAX_SEND_REPEATS};
 
-            bool send();
+            /// Build this command's PDU: [function][ack_][payload...].
+            /// The modbus hub prepends the device address and appends the CRC.
+            std::vector<uint8_t> build_pdu() const;
 
             static CenturyPumpCommand create_status_command(CenturyVSPump *pump, std::function<void(CenturyVSPump *pump, bool running)> on_status_func);
             static CenturyPumpCommand create_read_sensor_command(CenturyVSPump *pump, uint8_t page, uint8_t address, uint16_t scale, std::function<void(CenturyVSPump *pump, uint16_t value)> on_value_func);
@@ -85,12 +92,14 @@ namespace esphome
 
         /////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  To work successfully, this component needs modification to the ESPHome modbus.cpp file which
-        //  can be found in the `modbus` component in https://github.com/gazoodle/esphome branch
-        //  "Feature-Request-#1725"
+        //  This pump speaks a user-defined-function protocol rather than standard modbus registers, so
+        //  it subclasses ModbusClientDevice directly and handles its own PDUs. Every function code it
+        //  uses (0x41-0x45) falls in the modbus user-defined range, so all of its traffic arrives via
+        //  on_custom_response(). No patched modbus component is required - user-defined function
+        //  support has been part of mainline ESPHome since esphome/esphome#3461.
         //
         class CenturyVSPump : public PollingComponent,
-                              public ModbusDevice
+                              public modbus::ModbusClientDevice
         {
         public:
             CenturyVSPump() {}
@@ -102,22 +111,26 @@ namespace esphome
             void update() override;
             void dump_config() override;
 
-            /// called when a modbus response was parsed without errors
-            void on_modbus_data(const std::vector<uint8_t> &data) override;
-            /// called when a modbus error response was received
-            void on_modbus_error(uint8_t function_code, uint8_t exception_code) override;
+            /// called when a response to one of our user-defined function codes was parsed.
+            /// response_pdu is the whole PDU: [function][ACK][data...]. On failure it is empty and
+            /// the modbus exception code is in status.
+            void on_custom_response(std::span<const uint8_t> request_pdu, std::span<const uint8_t> response_pdu,
+                                    modbus::ResponseStatus status) override;
+            /// called when no matching response arrived; returns true to ask the hub to retry the frame
+            bool on_no_response(std::span<const uint8_t> request_pdu) override;
+            /// called when an accepted request was dropped before it reached the wire
+            void on_not_sent(std::span<const uint8_t> request_pdu) override;
+            /// called when the hub writes the current request to the wire
+            void on_sent(std::span<const uint8_t> request_pdu) override;
             /// Registers an item with the controller. Called by esphomes code generator
             void add_item(CenturyPumpItemBase *item) { items_.push_back(item); }
             void queue_command_(const CenturyPumpCommand &cmd);
 
-        protected:
-            void process_modbus_data_(const CenturyPumpCommand *response);
-            bool send_next_command_();
-
         private:
-            std::list<std::unique_ptr<CenturyPumpCommand>> command_queue_;
-            std::queue<std::unique_ptr<CenturyPumpCommand>> response_queue_;
-            uint32_t last_command_timestamp_;
+            bool has_active_request_() const { return this->request_active_ && !this->command_queue_.empty(); }
+            std::deque<std::unique_ptr<CenturyPumpCommand>> command_queue_;
+            bool request_active_{false};
+            uint32_t last_command_timestamp_{0};
             uint16_t command_throttle_{10};
 
         public:

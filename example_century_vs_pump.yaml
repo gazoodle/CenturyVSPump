@@ -1,106 +1,155 @@
+substitutions:
+  device_name: century-vs-pump
+  friendly_name: "Pool Pump Controller"
+  # RS485 UART pins. These match an M5Stack ATOM Lite in an Atom RS485 base.
+  # Change them to whatever your board and transceiver actually use.
+  uart_rx_pin: GPIO22
+  uart_tx_pin: GPIO19
+  # RGB status LED pin (ATOM Lite onboard SK6812). Remove the light: block
+  # below if your board has no addressable LED.
+  status_led_pin: GPIO27
+  # Modbus address of the pump. 0x15 (21) is the factory default.
+  pump_address: "0x15"
+
 esphome:
-  platform: esp32
-  name: century-vs-pump-controller
-  board: pico32
-  on_boot:
-    then:
-      light.turn_on:
-        id: id_light_1
-        blue: 1.0
-        brightness: 0.3
-        green: 1.0
-        red: 1.0
-wifi:
-  ap:
-    password: !secret ap_PWD
-    ssid: century-vs-pump-controller
-  password: !secret wifi_PWD
-  ssid: !secret wifi_SSID
-captive_portal:
-logger:
-api:
-  password: !secret api_PWD
-ota:
-  password: !secret ota_PWD
-time:
-  - platform: homeassistant
-    id: homeassistant_time
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  min_version: 2026.10.0
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
 external_components:
-  # Location of CenturyVSPump component implementation
+  # Location of the CenturyVSPump component implementation
   - source:
       type: git
       url: https://github.com/gazoodle/CenturyVSPump
       ref: main
-binary_sensor:
-  - platform: gpio
-    name: Pool Pump Controller button
-    pin:
-      inverted: True
-      number: GPIO39
-button:
-  - platform: template
-    name: Pool Pump Controller Demand 600RPM
-    id: id_button_7
-    on_press:
-      then:
-        - number.set:
-            id: id_number_rpm
-            value: 600
-  - platform: template
-    name: Pool Pump Controller Demand 2600RPM
-    id: id_button_6
-    on_press:
-      then:
-        - number.set:
-            id: id_number_rpm
-            value: 2600
-  - platform: template
-    name: Pool Pump Controller Demand 3450RPM
-    id: id_button_8
-    on_press:
-      then:
-        - number.set:
-            id: id_number_rpm
-            value: 3450
-centuryvspump:
-light:
-  - platform: neopixelbus
-    name: Pool Pump Controller LED
-    id: id_light_1
-    num_leds: 1
-    pin: GPIO27
-    variant: SK6812
+    components: [centuryvspump]
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: ${device_name}
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+# A UART is needed to talk to the RS485 bus. The pump is fixed at 9600 8N1.
+uart:
+  id: pump_uart
+  baud_rate: 9600
+  rx_pin: ${uart_rx_pin}
+  tx_pin: ${uart_tx_pin}
+
+# The modbus hub. This component is a modbus client (it polls the pump).
+# If your transceiver needs an explicit direction pin, add:
+#   flow_control_pin: GPIOxx
 modbus:
-  id: id_modbus_3
-number:
+  id: pump_modbus
+  uart_id: pump_uart
+  role: client
+
+# The pump itself.
+centuryvspump:
+  id: pool_pump
+  modbus_id: pump_modbus
+  address: ${pump_address}
+  update_interval: 10s
+
+switch:
+  # Turn the pump motor on or off
   - platform: centuryvspump
-    name: Pool Pump Controller Demand
-    id: id_number_rpm
+    id: pump_run
+    century_vs_pump_id: pool_pump
+    name: "Run"
+
 sensor:
-  - platform: wifi_signal
-    name: Pool Pump Controller Wifi Signal
-    update_interval: 60min
+  # Current motor speed in RPM
   - platform: centuryvspump
-    name: Pool Pump Controller RPM
+    century_vs_pump_id: pool_pump
+    name: "RPM"
     type: rpm
     unit_of_measurement: RPM
+    accuracy_decimals: 0
+
+  # Current motor speed demand in RPM
   - platform: centuryvspump
-    name: Pool Pump Controller Demand
+    century_vs_pump_id: pool_pump
+    name: "Demand"
+    type: custom
     address: 3
     page: 0
     scale: 4
-    type: custom
     unit_of_measurement: RPM
-switch:
+    accuracy_decimals: 0
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+number:
+  # Control the pump speed demand in RPM.
+  # Range is 600 to 3450 in steps of 50.
   - platform: centuryvspump
-    name: Pool Pump Controller Run
-    id: id_switch_4
-uart:
-  id: id_uart_2
-  baud_rate: 9600
-  debug:
-  rx_pin: GPIO22
-  tx_pin: GPIO19
-web_server:
-  local: True
-  port: 80
+    id: pump_demand
+    century_vs_pump_id: pool_pump
+    name: "Demand Setpoint"
+
+# Optional: preset speed buttons
+button:
+  - platform: template
+    name: "Demand 600 RPM"
+    on_press:
+      - number.set:
+          id: pump_demand
+          value: 600
+  - platform: template
+    name: "Demand 2600 RPM"
+    on_press:
+      - number.set:
+          id: pump_demand
+          value: 2600
+  - platform: template
+    name: "Demand 3450 RPM"
+    on_press:
+      - number.set:
+          id: pump_demand
+          value: 3450
+
+# Optional: onboard RGB LED. Remove if your board has no addressable LED.
+light:
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    name: "Status LED"
+    pin: ${status_led_pin}
+    num_leds: 1
+    chipset: SK6812
+    channel_colors: GRB
+    default_transition_length: 0s
+    effects:
+      - strobe:
+          name: "Running"
+          colors:
+            - state: true
+              brightness: 60%
+              duration: 500ms
+            - state: false
+              duration: 500ms
+
+text_sensor:
+  - platform: version
+    name: "ESPHome Version"

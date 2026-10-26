@@ -9,7 +9,7 @@ namespace esphome
         /////////////////////////////////////////////////////////////////////////////////////////////
         CenturyPumpCommand CenturyVSPumpRunSwitch::create_command()
         {
-            return CenturyPumpCommand::create_status_command(pump_, [=](CenturyVSPump *pump, bool running)
+            return CenturyPumpCommand::create_status_command(pump_, [this](CenturyVSPump *pump, bool running)
                                                              { this->publish_state(running); });
         }
 
@@ -18,12 +18,12 @@ namespace esphome
         {
             if (state)
             {
-                pump_->queue_command_(CenturyPumpCommand::create_run_command(pump_, [=](CenturyVSPump *pump)
+                pump_->queue_command_(CenturyPumpCommand::create_run_command(pump_, [this](CenturyVSPump *pump)
                                                                              { this->publish_state(true); }));
             }
             else
             {
-                pump_->queue_command_(CenturyPumpCommand::create_stop_command(pump_, [=](CenturyVSPump *pump)
+                pump_->queue_command_(CenturyPumpCommand::create_stop_command(pump_, [this](CenturyVSPump *pump)
                                                                               { this->publish_state(false); }));
             }
 
