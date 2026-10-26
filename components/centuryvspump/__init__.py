@@ -22,6 +22,7 @@ CenturyVSPump = century_vs_pump_ns.class_(
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.All(
+    cv.require_esphome_version(2026, 8, 1),
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(CenturyVSPump),
